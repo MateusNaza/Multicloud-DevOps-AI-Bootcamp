@@ -55,3 +55,100 @@ terraform destroy
 ```
       
 ![bucket criado](assets/bucket_criado.png)
+     
+
+# Dia 2
+     
+## Criação de Tabelas no _DynamoDB_
+      
+Logo no início do segundo dia, já consegui perceber o poder e a velocidade do Terraform para provisionar recursos na nuvem.
+
+Alterei o arquivo de configuração para criar três tabelas no _DynamoDB_, e o processo levou apenas alguns segundos para ser concluído. O que mais me impressionou foi a escalabilidade, pois, como a criação das tabelas foi realizada em paralelo, isso significa que, mesmo se fosse necessário criar 100 tabelas, o tempo teóricamente para a execução seria o mesmo ou próximo desse.
+     
+![tabelas dynamodb](assets/tabelas_dynamodb.png)
+          
+## Preparando o Docker
+     
+Para iniciar com o Docker, primeiro realizei os comandos de instalação e configuração.
+     
+```bash
+sudo yum update -y
+sudo yum install docker -y
+
+sudo systemctl start docker
+sudo systemctl enable docker
+
+sudo usermod -a -G docker $(whoami)
+newgrp docker
+```
+     
+## Configurando Backend
+
+Com o Docker instalado, podemos baixar a imagem do _CloudMart_ e configurar o container do _backend_.
+
+```bash
+mkdir backend && cd backend
+
+wget https://tcb-public-events.s3.amazonaws.com/mdac/resources/day2/cloudmart-backend.zip
+unzip cloudmart-backend.zip
+
+nano .env
+
+# PORT=5000
+# AWS_REGION=us-east-1
+
+nano Dockerfile
+
+# FROM node:18
+# WORKDIR /usr/src/app
+# COPY package*.json ./
+# RUN npm install
+# COPY . .
+# EXPOSE 5000
+# CMD ["npm", "start"]
+
+docker build -t cloudmart-backend .
+docker run -d -p 5000:5000 --env-file .env cloudmart-backend
+```     
+            
+## Configurando Frontend
+      
+Agora criaremos também a imagem para rodar o Frontend da aplicação.
+      
+```bash
+mkdir frontend && cd frontend
+
+wget https://tcb-public-events.s3.amazonaws.com/mdac/resources/day2/cloudmart-frontend.zip
+unzip cloudmart-frontend.zip
+
+nano .env
+
+# VITE_API_BASE_URL=http://<seu-ip-ec2>:5000/api
+
+nano Dockerfile
+
+# FROM node:16-alpine as build
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci
+# COPY . .
+# RUN npm run build
+
+# FROM node:16-alpine
+# WORKDIR /app
+# RUN npm install -g serve
+# COPY --from=build /app/dist /app
+# ENV PORT=5001
+# ENV NODE_ENV=production
+# EXPOSE 5001
+# CMD ["serve", "-s", ".", "-l", "5001"]
+
+docker build -t cloudmart-frontend .
+docker run -d -p 5001:5001 cloudmart-frontend
+```
+     
+>Precisei também liberar as portas 5000 e 5001 no security group para conseguir acessar a aplicação
+     
+A Aplicação ficou disponível no link 'http://<ip-publico-ec2>:5001' e para cadastrar produtos basta entrar na parte de administrador 'http://<ip-publico-ec2>:5001/admin'.
+      
+![produtos cloudmart](assets/produtos_cloudmart.png)

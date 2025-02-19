@@ -1,16 +1,37 @@
 provider "aws" {
-  region = "us-east-1"  # Substitua pela região desejada
+  region = "us-east-1" 
 }
 
-resource "random_id" "bucket_suffix" {
-  byte_length = 8
+# Tabelas DynamoDB
+resource "aws_dynamodb_table" "cloudmart_products" {
+  name           = "cloudmart-products"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
 }
 
-resource "aws_s3_bucket" "my_bucket" {
-  bucket = "bootcamp-multicloud-${random_id.bucket_suffix.hex}"
+resource "aws_dynamodb_table" "cloudmart_orders" {
+  name           = "cloudmart-orders"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "id"
 
-  tags = {
-    Name        = "My bucket"
-    Environment = "Dev"
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+resource "aws_dynamodb_table" "cloudmart_tickets" {
+  name           = "cloudmart-tickets"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
   }
 }
