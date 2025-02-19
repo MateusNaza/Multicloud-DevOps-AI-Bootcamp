@@ -51,6 +51,7 @@ terraform plan
 terraform apply
 
 # Comando para destruir os recursos recem criados
-terraform destroy``` 
+terraform destroy
+```
       
 ![bucket criado](assets/bucket_criado.png)
