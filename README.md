@@ -149,6 +149,6 @@ docker run -d -p 5001:5001 cloudmart-frontend
      
 >Precisei também liberar as portas 5000 e 5001 no security group para conseguir acessar a aplicação
      
-A Aplicação ficou disponível no link 'http://<ip-publico-ec2>:5001' e para cadastrar produtos basta entrar na parte de administrador 'http://<ip-publico-ec2>:5001/admin'.
+A Aplicação ficou disponível no link 'http://{ip-publico-ec2}:5001' e para cadastrar produtos basta entrar na parte de administrador 'http://{ip-publico-ec2}5001/admin'.
       
 ![produtos cloudmart](assets/produtos_cloudmart.png)
