@@ -152,3 +152,120 @@ docker run -d -p 5001:5001 cloudmart-frontend
 A Aplicação ficou disponível no link 'http://{ip-publico-ec2}:5001' e para cadastrar produtos basta entrar na parte de administrador 'http://{ip-publico-ec2}5001/admin'.
       
 ![produtos cloudmart](assets/produtos_cloudmart.png)
+     
+
+# Dia 3 - Parte 1
+     
+## Kubernetes Configurações iniciais
+     
+Hoje iremos iniciar a utilização do kubernetes, acessando atravéz do serviço Amazon EKS, esse serviço é pago e deve-se ter muita atenção ao utilizá-lo para não esquece-lo aberto.
+     
+Primeiro eu criei um novo usuário IAM chamado 'eksuser' e depois dentro da minha instância EC2 segui os seguintes passos:
+     
+```bash
+# Acessei o usuário eksuser
+aws configure
+
+# Instala ferramenta eksctl
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo cp /tmp/eksctl /usr/bin
+eksctl version
+
+# Instala ferramenta kubectl
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+echo 'export PATH=$PATH:$HOME/bin' >> ~/.bashrc
+kubectl version --short --client
+
+# Cria Cluster Kubernetes
+eksctl create cluster \
+  --name cloudmart \
+  --region us-east-1 \
+  --nodegroup-name standard-workers \
+  --node-type t3.medium \
+  --nodes 1 \
+  --with-oidc \
+  --managed
+```
+    
+Após o último comando, irá iniciar algumas stacks do CloudFomation, pois é atravéz dele que são criados todos os recursos necessários do EKS.
+     
+![CloudFormation](assets/CloudFormation.png)
+     
+
+## Kubernetes primeiros passos
+     
+Agora que temos nosso cluster kubernetes ativo, podemos iniciar com os primeiros comandos.
+      
+```bash
+# Conecta ao cluster
+aws eks update-kubeconfig --name cloudmart
+
+# Verifica conectividade do Cluster
+kubectl get svc
+kubectl get nodes
+
+# Dá permissão (atravéz de Role) ao cluster para acessar outros serviços AWS
+eksctl create iamserviceaccount \
+  --cluster=cloudmart \
+  --name=cloudmart-pod-execution-role \
+  --role-name CloudMartPodExecutionRole \
+  --attach-policy-arn=arn:aws:iam::aws:policy/AdministratorAccess\
+  --region us-east-1 \
+  --approve
+```
+     
+Agora precisamos registrar as imagens do Backend e do Frontend no ECR. Para isso seguimos os seguintes passos:
+      
+1- Abra o serviço ECS no console AWS
+2- Vá na parte de repositórios publicos
+3- Crie um novo repositório (cloudmart-backend e cloudmart-frontend)
+4- Clique no repositório de depois em 'View Push Commands', e faça, dentro da instância, os comandos apresentados
+      
+## Deployment do Backend no Kubernetes
+      
+```bash
+# Entre na pasta do backend
+cd backend
+
+# Cria um novo deployment do Kubernetes no arquivo yaml
+nano cloudmart-backend.yaml
+
+# Realiza o Deployment do Backend no Kubernetes
+kubectl apply -f cloudmart-backend.yaml
+
+# Comandos para acompanhar a criação dos objetos
+kubectl get pods
+kubectl get deployment
+kubectl get service # Lembre-se de copiar o IP Público para usar no .env do Frontend
+```
+       
+## Deployment do Frontend no Kubernetes
+      
+```bash
+# Entre na pasta do frontend
+cd frontend
+
+# Edita o arquivo .env
+nano .env
+
+# VITE_API_BASE_URL=http://a75602f93a86f47ca977bae4e78d0cde-1631225860.us-east-1.elb.amazonaws.com:5000/api
+
+# Cria um novo deployment do Kubernetes no arquivo yaml
+nano cloudmart-frontend.yaml
+
+# Realiza o Deployment do frontend no Kubernetes
+kubectl apply -f cloudmart-frontend.yaml
+```
+     
+E pronto, temos a aplicação rodando dentro dos containeres orquestrados pelo EKS, agora para não gerar cobranças exessivas vamos fazer a limpeza do ambiente.
+      
+```bash
+kubectl delete service cloudmart-frontend-app-service
+kubectl delete deployment cloudmart-frontend-app
+kubectl delete service cloudmart-backend-app-service
+kubectl delete deployment cloudmart-backend-app
+
+eksctl delete cluster --name cloudmart --region us-east-1
+```
