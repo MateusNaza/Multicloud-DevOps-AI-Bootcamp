@@ -269,3 +269,136 @@ kubectl delete deployment cloudmart-backend-app
 
 eksctl delete cluster --name cloudmart --region us-east-1
 ```
+      
+# Dia 3 - Parte 2
+      
+## Configurando Pipeline CI/CD
+     
+Para essa etapa continuaremos rodando a aplicação dentro do Kubernetes, porém faremos uma esteira de CI/CD para a parte de Frontend para que todas as mudanças feitas no código e atualizadas no repositório github sejam refletidas na aplicação em produção de forma continua.
+      
+![CICD.png](assets/CICD.png)
+      
+>Como a pipeline CI/CD será aplicada somente na parte de frontend do projeto, subi um novo repositório no Github contendo o código fonte somente do front num repositório >chamado __Cloudmart__.     
+
+## AWS CodePipeline   
+     
+Para configurar o _CodePipeline_ segui os seguintes passos:    
+     
+1- No console cliquei no botão __Create new Pipeline__ .          
+2- Selecionei a opção __Build Custom Pipeline__.   
+       
+![custom_pipeline](assets/custom_pipeline.png)     
+      
+3- Nomeei a pipeline como: __cloudmart-cicd-pipeline__.     
+4- Conectei meu repositório Github seguindo os passos do console.      
+       
+![conection_github](assets/conection_github.png)     
+     
+5- Configurei a etapa de build para utilizar o __CodeBuild__ e já cliquei para criar um projeto dentro desse serviço.     
+      
+![codebuild_option](assets/codebuild_option.png)     
+     
+6- Na aba __CodeBuild__, nomeeio meu projeto de __cloudmart-application__ e fiz as seguintes alterações.     
+     
+![codebuild_enviroment.png](assets/codebuild_enviroment.png)     
+      
+7- Ainda nessa guia, adicionei uma variáveu de ambiente com: KEY=ECR_REPO e VALUE=URI-do-Repositório-ECR.     
+8- Criei uma _buildspec.yaml_ com o seguinte conteúdo.     
+      
+```bash
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      docker: 20
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - REPOSITORY_URI=$ECR_REPO
+      - aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/r2l2v5m8
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - export imageTag=$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - printf '[{\"name\":\"cloudmart-app\",\"imageUri\":\"%s\"}]' $REPOSITORY_URI:$imageTag > imagedefinitions.json
+      - cat imagedefinitions.json
+      - ls -l
+
+env:
+  exported-variables: ["imageTag"]
+
+artifacts:
+  files:
+    - imagedefinitions.json
+    - cloudmart-frontend.yaml
+```
+      
+
+E pronto, após esse comando criamos nossa pipeline.
+     
+![pipeline_cicd](assets/pipeline_cicd.png)    
+     
+
+> Detalhe importante!!!
+> Deve-se dar a permissão para acessar o ECR para a role 'codebuild...' no IAM
+       
+## Adicionando processo de Deploy
+      
+Após concluir a pipeline, adicionei mais um processo a ela, e na ação que inseri criei outro projeto do _CodeBuild_ seguindo os mesmos passos anteriores porém com as seguintes modificações:     
+  - O nome do projeto foi __cloudmartDeployToProduction__.
+  - Coloquei de variáveis de ambiente a AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY.
+       
+Para o _buildspec.yaml_ desse arquivo vamos usar o seguinte código:      
+```bash
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: 20
+    commands:
+      - curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl
+      - chmod +x ./kubectl
+      - mv ./kubectl /usr/local/bin
+      - kubectl version --short --client
+  post_build:
+    commands:
+      - aws eks update-kubeconfig --region us-east-1 --name cloudmart
+      - kubectl get nodes
+      - ls
+      - IMAGE_URI=$(jq -r '.[0].imageUri' imagedefinitions.json)
+      - echo $IMAGE_URI
+      - sed -i "s|CONTAINER_IMAGE|$IMAGE_URI|g" cloudmart-frontend.yaml
+      - kubectl apply -f cloudmart-frontend.yaml
+```
+       
+## Edição de arquivo .yaml no github     
+       
+A útima configuração foi apenas alterar o caminho da imagem pela variável CONTAINER_IMAGE dentro do meu arquivo '.yaml' no repositório git do projeto. Após fazer o push dessa alteração o meu pipeline foi automaticamente acionado e efetuado todo o processo automático de deploy da alteração.      
+       
+![pipeline_cicd_completa](assets/pipeline_cicd_completa.png)     
+     
+## Testando alterações e subindo para produção
+      
+Vou fazer um teste simples alterando um texto para verificar se as alterações estão subindo para produção como deveriam.
+     
+### Antes da alteração
+
+![antes_alteracao.png](assets/antes_alteracao.png)
+
+Somente alterei um texto e dei o push do repositório na branch main...
+       
+### Depois da Alteração
+      
+![depois_mudanca](assets/depois_mudanca.png)
+       
