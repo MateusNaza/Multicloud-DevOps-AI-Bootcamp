@@ -1,5 +1,44 @@
 # Multicloud-DevOps-AI-Bootcamp
-     
+
+# Indice            
+
+[Introdução do projeto](#situação)
+         
+1. [Dia 1](#dia-1)
+   - [Preparação de ambiente](#preparação-de-ambiente)
+   - [Iniciando com terraform](#iniciando-com-terraform)
+
+2. [Dia 2](#dia-2)
+   - [Criação de tabelas no DynamoDB](#criação-de-tabelas-no-dynamodb)
+   - [Preparando o Docker](#preparando-o-docker)
+   - [Configurando o Backend](#configurando-backend)
+   - [Configurando o Frontend](#configurando-frontend)
+
+3. [Dia 3](#dia-3)
+   - [Kubernetes: Configurações iniciais](#kubernetes-configurações-iniciais)
+   - [Kubernetes: Primeiros passos](#kubernetes-primeiros-passos)
+   - [Deployment do Backend no Kubernetes](#deployment-do-backend-no-kubernetes)
+   - [Deployment do Frontend no Kubernetes](#deployment-do-frontend-no-kubernetes)
+
+3. [Dia 4](#dia-4)
+   - [Configuração do Pipeline CI/CD](#configurando-pipeline-cicd)
+   - [AWS CodePipeline](#aws-codepipeline)
+   - [Adicionando Processo de Deploy na Pipeline](#adicionando-processo-de-deploy)
+   - [Edição de arquivo .yaml no github](#edição-de-arquivo-yaml-no-github)
+   - [Testando alterações e subindo para produção](#testando-alterações-e-subindo-para-produção)
+
+3. [Dia 5](#dia-5)
+   - [Criação da infraestrutura base para o Bedrock](#criação-da-infraestrutura-base-para-o-bedrock)
+   - [Iniciando com o Amazon Bedrock](#iniciando-com-o-amazon-bedrock)
+   - [Criação do agente](#criação-do-agente)
+   - [Configuração do 'Action Group'](#configuração-do-action-group)
+   - [Configuração do assistente da OpenAI](#configuração-do-assistente-openai)
+   - [Incluindo os assistentes na aplicação](#incluindo-os-assistentes-na-aplicação)
+   - [Testando o assistente de produtos](#testando-em-produção-os-assistentes-de-ia)
+   - [Testando o assistente de suporte técnico](#assistente-de-suporte-técnico)
+
+
+            
 # Situação     
      
 Este projeto tem como objetivo simular um cenário real em que uma empresa, ao perceber que seu concorrente está oferecendo preços mais competitivos, busca maneiras de reduzir seus custos para se manter competitiva no mercado.    
@@ -154,7 +193,7 @@ A Aplicação ficou disponível no link 'http://{ip-publico-ec2}:5001' e para ca
 ![produtos cloudmart](assets/produtos_cloudmart.png)
      
 
-# Dia 3 - Parte 1
+# Dia 3
      
 ## Kubernetes Configurações iniciais
      
@@ -270,7 +309,7 @@ kubectl delete deployment cloudmart-backend-app
 eksctl delete cluster --name cloudmart --region us-east-1
 ```
       
-# Dia 3 - Parte 2
+# Dia 4
       
 ## Configurando Pipeline CI/CD
      
@@ -403,7 +442,7 @@ Somente alterei um texto e dei o push do repositório na branch main...
 ![depois_mudanca](assets/depois_mudanca.png)
        
 
-# Dia 4
+# Dia 5
           
 ## Criação da infraestrutura base para o Bedrock
           
